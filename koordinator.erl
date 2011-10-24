@@ -1,5 +1,5 @@
--module(starter).
--export(export_all).
+-module(koordinator).
+-compile(export_all).
 
 start() ->
 	%{ok, ConfigListe} = file:consult("koordinator.cfg"),
@@ -11,13 +11,13 @@ loop(ArbeitsZeit, TermZeit, GGTProzessnummer) ->
 		{getsteeringval, Starter} -> %Die Anfrage nach den steuernden Werten durch den Starter Prozess.
 			Starter ! {steeringval, ArbeitsZeit, TermZeit, GGTProzessnummer};
 		{hello, Clientname} -> %Ein ggT-Prozess meldet sich beim Koordinator mit Namen Clientname an (Name ist der lokal registrierte Name!).		
-			;
+			ka;
 		{briefmi, {Clientname, CMi, CZeit}} -> %Ein ggT-Prozess mit Namen Clientname informiert über sein neues Mi CMi um CZeit Uhr.
-			;
+			ka;
 		{briefterm, {Clientname, CMi, CZeit}} -> %Ein ggT-Prozess mit Namen Clientname informiert über über die Terminierung der Berechnung mit Ergebnis CMi um CZeit Uhr.
-			;
+			ka;
 		reset -> %Der Koordinator sendet allen ggT-Prozessen das kill-Kommando und bringt sich selbst in den initialen Zustand, indem sich Starter wieder melden können.
-			;
+			ka;
 		kill -> %Der Koordinator wird beendet und sendet allen ggT-Prozessen das kill-Kommando.
-			
+			ka
 	end.
