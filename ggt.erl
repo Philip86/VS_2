@@ -22,10 +22,15 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit, T
 			loop(MiNeu, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit, TermZeit);
 		{sendy, Y} ->
 			NewMi = calcGgt(Mi, Y, NeighborL, NeighborR, KoordName, MeinName),
+			io:format("Neuer MI von: ~p  ist = ~p \n", [MeinName, NewMi]),
 			loop(NewMi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit, TermZeit);
 		{abstimmung,Initiator} -> 
 			%KOMMT NOCH!!!!
 			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit, TermZeit);
+		startSending ->
+			NeighborL ! {sendy, Mi},
+			NeighborR ! {sendy, Mi},
+			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit, TermZeit);	
 		{tellmi,From} -> 
 			From ! Mi,
 			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit, TermZeit);
@@ -33,12 +38,13 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit, T
 	end.
 
 calcGgt(Mi, Y,LeftN, RightN, KoordName, MeinName) ->
+	io:format("CalcGGT Fun von: ~p  mit Mi = ~p   und Y = ~p \n", [MeinName,Mi,Y]),
 	if Y < Mi -> 
 		NewMi = ((Mi - 1) rem Y) + 1,
 		%MUSS NOCH !!!
 		%KoordName ! {briefmi,{MeinName,NewMi,CZeit}},
-		LeftN ! {setpm, NewMi},
-		RightN ! {setpm, NewMi},
+		LeftN ! {sendy, NewMi},
+		RightN ! {sendy, NewMi},
 		NewMi;
 		true -> Mi
 	end. 
