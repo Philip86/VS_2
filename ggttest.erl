@@ -10,16 +10,20 @@ start() ->
 	register(p2, spawn(ggt, start, [Namensdienst, KoordName, g2, ArbeitsZeit, TermZeit])),
 	register(p3, spawn(ggt, start, [Namensdienst, KoordName, g3, ArbeitsZeit, TermZeit])),
 	register(p4, spawn(ggt, start, [Namensdienst, KoordName, g4, ArbeitsZeit, TermZeit])),
-	p1 ! {setneighbors, p4, p2},
-	p2 ! {setneighbors, p1, p3},
-	p3 ! {setneighbors, p2, p4},
-	p4 ! {setneighbors, p3, p1},
-	p1 ! {setpm, 13},
-	p2 ! {setpm, 26},
-	p3 ! {setpm, 39},
-	p4 ! {setpm, 52},
-	p1 ! startSending,
-	loop().
+	koor ! {hello, p1},
+	koor ! {hello, p2},
+	koor ! {hello, p3},
+	koor ! {hello, p4}.
+	%p1 ! {setneighbors, p4, p2},
+	%p2 ! {setneighbors, p1, p3},
+	%p3 ! {setneighbors, p2, p4},
+	%p4 ! {setneighbors, p3, p1},
+	%p1 ! {setpm, 13*3},
+	%p2 ! {setpm, 13*9},
+	%p3 ! {setpm, 13*5},
+	%p4 ! {setpm, 13*12},
+	%p3 ! startSending,
+	%loop().
 
 	loop() ->
 		receive

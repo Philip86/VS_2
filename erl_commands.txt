@@ -1,4 +1,4 @@
 c(werkzeug), c(nameservice), c(koordinator), c(starter), c(ggt).
 
 für den tester
-c(ggt), c(ggttest), register(tester, spawn(ggttest, start, [])).
+c(ggt), c(ggttest), c(koordinator), koordinator:start().

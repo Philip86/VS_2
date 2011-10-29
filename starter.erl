@@ -4,7 +4,7 @@
 start() ->
 	%{ok, ConfigListe} = file:consult("koordinator.cfg"),
 	%{ok, ArbeitsZeit} = werkzeug:get_config_value(arbeitszeit, ConfigListe) * 1000,
-	spawn(start, loop, {}).
+	spawn(starter, loop, []).
 
 loop() ->
 	koor ! {getsteeringval, self()},
@@ -17,6 +17,6 @@ loop() ->
 startGGTProzess(_, _, 0) ->
 	finished;
 startGGTProzess(ArbeitsZeit, TermZeit, N) ->
-	GGTName = 1700 + (N * 10) + 1,
-	register(GGTName, spawn(ggt, start, {"namensDienst", cord, GGTName, ArbeitsZeit, TermZeit})),
+	GGTName = list_to_atom(integer_to_list(1700 + (N * 10) + 1)),
+	register(GGTName, spawn(ggt, start, ["namensDienst", koor, GGTName, ArbeitsZeit, TermZeit])),
 	startGGTProzess(ArbeitsZeit, TermZeit, N - 1).

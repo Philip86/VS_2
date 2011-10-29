@@ -2,8 +2,8 @@
 -compile(export_all).
 
 start(Namensdienst, KoordName, MeinName, ArbeitsZeit, TermZeit) -> 
-	%KoordName ! hello,
-	%Namensdienst ! {rebind self()}
+	KoordName ! {hello,MeinName},
+	%Namensdienst ! {{self(),{rebind,MeinName,node()}},
 
 	receive	
 		{setneighbors, LeftN, RightN} -> true
