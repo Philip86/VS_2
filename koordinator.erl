@@ -4,7 +4,7 @@
 start() ->
 	%{ok, ConfigListe} = file:consult("koordinator.cfg"),
 	%{ok, ArbeitsZeit} = werkzeug:get_config_value(arbeitszeit, ConfigListe) * 1000,
-	register(koor, spawn(koordinator, init, [3000, 3000, 20, []])).
+	register(koor, spawn(koordinator, init, [3000, 3000, 5000, []])).
 
 init(ArbeitsZeit, TermZeit, GGTProzessnummer, GGTListe) ->
 	receive
@@ -48,12 +48,13 @@ for_loop(N, Length, Arr) ->
 
 calcRandomMi()->
 	Prims = [3, 5, 11, 13, 23, 37],
-	calcRandomMiRec(Prims, 0).
-calcRandomMiRec([],Summe)->
-	trunc(Summe);
-calcRandomMiRec([Kopf | Rest], Summe) ->
-	SummeNew = Summe + math:pow(Kopf, random:uniform(3)-1),
-	calcRandomMiRec(Rest, SummeNew).
+	WunschGGT = 13,
+	calcRandomMiRec(Prims, WunschGGT).
+calcRandomMiRec([],Produkt)->
+	trunc(Produkt);
+calcRandomMiRec([Kopf | Rest], Produkt) ->
+	ProduktNew = Produkt * math:pow(Kopf, random:uniform(3)-1),
+	calcRandomMiRec(Rest, ProduktNew).
 
 startCalc(GGTListe)->
 	Arr = array:from_list(GGTListe),
