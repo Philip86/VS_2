@@ -4,7 +4,7 @@
 start() ->
 	%{ok, ConfigListe} = file:consult("koordinator.cfg"),
 	%{ok, ArbeitsZeit} = werkzeug:get_config_value(arbeitszeit, ConfigListe) * 1000,
-	register(koor, spawn(koordinator, init, [3000, 3000, 3, []])).
+	register(koor, spawn(koordinator, init, [3000, 3000, 20, []])).
 
 init(ArbeitsZeit, TermZeit, GGTProzessnummer, GGTListe) ->
 	receive
@@ -16,6 +16,7 @@ init(ArbeitsZeit, TermZeit, GGTProzessnummer, GGTListe) ->
 			init(ArbeitsZeit, TermZeit, GGTProzessnummer, [Clientname | GGTListe]);
 		letsgo ->
 			createRingAndMis(GGTListe), 
+			startCalc(GGTListe),
 			loop(ArbeitsZeit, TermZeit, GGTProzessnummer)	
 	end.
 
@@ -26,6 +27,7 @@ createRingAndMis(GGTListe)->
 	
 for_loop(N, Length, _) when N >= Length -> 
     io:format("Done!~n");
+
 for_loop(N, Length, Arr) -> 
 	Current = array:get(N, Arr),
 	if N == 0 ->
@@ -40,9 +42,43 @@ for_loop(N, Length, Arr) ->
 	end,
 	io:format("Links: ~p ERHIER!!! ~p  Rechts: ~p \n",[LeftN, Current, RightN]),
 	Current ! {setneighbors, LeftN, RightN},
-	Current ! {setpm, (N+1)*13},
+	Mi = calcRandomMi(),
+	Current ! {setpm, Mi},
     for_loop(N+1, Length, Arr).
 
+calcRandomMi()->
+	Prims = [3, 5, 11, 13, 23, 37],
+	calcRandomMiRec(Prims, 0).
+calcRandomMiRec([],Summe)->
+	trunc(Summe);
+calcRandomMiRec([Kopf | Rest], Summe) ->
+	SummeNew = Summe + math:pow(Kopf, random:uniform(3)-1),
+	calcRandomMiRec(Rest, SummeNew).
+
+startCalc(GGTListe)->
+	Arr = array:from_list(GGTListe),
+	ArrSize = array:size(Arr),
+	AnzStarter = trunc((ArrSize/100) * 15),
+	if AnzStarter < 2 ->
+		sendStartToClients(Arr, 2, [], ArrSize);
+	true -> sendStartToClients(Arr, AnzStarter, [], ArrSize)
+	end.
+
+sendStartToClients(Arr, 0, UsedClients, ArrSize) -> 
+	io:format("Koordinator hat das zufaellige Starten abgeschlossen \n");
+sendStartToClients(Arr, N, UsedClients, ArrSize) ->
+	ChoosenClient = random:uniform(ArrSize) -1,
+	WasteBool = lists:member(ChoosenClient, UsedClients),
+	if WasteBool ->
+		sendStartToClients(Arr, N, UsedClients, ArrSize);
+	true ->
+		Client = array:get(ChoosenClient, Arr),
+		RandomY =  calcRandomMi(),
+		io:format("Koordinator schickt start an: ~p \n", [Client]),
+		Client ! {sendy, RandomY},
+		sendStartToClients(Arr, N-1, [ChoosenClient| UsedClients], ArrSize)
+	end.
+		
 
 loop(ArbeitsZeit, TermZeit, GGTProzessnummer) ->
 	receive
