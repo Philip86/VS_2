@@ -2,9 +2,20 @@
 -compile(export_all).
 
 start() ->
-	%{ok, ConfigListe} = file:consult("koordinator.cfg"),
-	%{ok, ArbeitsZeit} = werkzeug:get_config_value(arbeitszeit, ConfigListe) * 1000,
-	register(koor, spawn(koordinator, init, [3000, 3000, 5000, []])).
+	{ok, ConfigListe} = file:consult("koordinator.cfg"),
+	{ok,NameServiceNode} = werkzeug:get_config_value(nameservicenode, ConfigListe),
+	{ok,KoordinatorName} = werkzeug:get_config_value(koordinatorname, ConfigListe),
+	{ok,GGTProzessNummer} = werkzeug:get_config_value(ggtprozessnummer, ConfigListe),
+	{ok,TermZeit} = werkzeug:get_config_value(termzeit, ConfigListe),
+	{ok,ArbeitsZeit} = werkzeug:get_config_value(arbeitszeit, ConfigListe),
+
+	%register(KoordinatorName, spawn(koordinator, init, [ArbeitsZeit, TermZeit, GGTProzessNummer, []])),	
+
+	
+	pong = net_adm:ping(NameServiceNode),
+	KAB = global:whereis_name(nameservice),
+	io:format("Nameservice: ~p, NameserviceNode: ~p~n", [KAB, NameServiceNode]),
+	KAB ! {self(),{rebind,KoordinatorName,node()}}.
 
 init(ArbeitsZeit, TermZeit, GGTProzessnummer, GGTListe) ->
 	receive
@@ -17,7 +28,7 @@ init(ArbeitsZeit, TermZeit, GGTProzessnummer, GGTListe) ->
 		letsgo ->
 			createRingAndMis(GGTListe), 
 			startCalc(GGTListe),
-			loop(ArbeitsZeit, TermZeit, GGTProzessnummer)	
+			loop()	
 	end.
 
 createRingAndMis(GGTListe)->
@@ -81,13 +92,15 @@ sendStartToClients(Arr, N, UsedClients, ArrSize) ->
 	end.
 		
 
-loop(ArbeitsZeit, TermZeit, GGTProzessnummer) ->
+loop() ->
 	receive
 
-		{briefmi, {Clientname, CMi, CZeit}} -> %Ein ggT-Prozess mit Namen Clientname informiert über sein neues Mi CMi um CZeit Uhr.
-			ka;
+		{briefmi, {Clientname, CMi, CZeit}} -> %Ein ggT-Prozess mit Namen Clientname informiert über sein neues Mi CMi um CZeit Uhr.			
+			io:format("~p meldet neues Mi ~p um ~p. \n", [Clientname,CMi, CZeit]),
+			loop();
 		{briefterm, {Clientname, CMi, CZeit}} -> %Ein ggT-Prozess mit Namen Clientname informiert über über die Terminierung der Berechnung mit Ergebnis CMi um CZeit Uhr.
-			ka;
+			io:format("~p meldet TERMINIERUNG !!! mit Mi ~p um ~p. \n", [Clientname,CMi, CZeit]),
+			loop();
 		reset -> %Der Koordinator sendet allen ggT-Prozessen das kill-Kommando und bringt sich selbst in den initialen Zustand, indem sich Starter wieder melden können.
 			ka;
 		kill -> %Der Koordinator wird beendet und sendet allen ggT-Prozessen das kill-Kommando.
