@@ -5,13 +5,13 @@ start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) ->
 	register(MeinName, self()),	
 	pong = net_adm:ping(NamensdienstNode),
 	Nameservice2 = global:whereis_name(nameservice),
-	io:format("ggt oka: ~p \n"),
+	%io:format("ggt oka: ~p \n", [Nameservice2]),
 	Nameservice2 ! {self(),{rebind,MeinName,node()}},
-	io:format("ggtasdlksajdlkj\n"),
+	%io:format("ggtasdlksajdlkj\n"),
 	receive
 		ok -> true
 	end,
-	io:format("g445\n"),
+	%io:format("g445\n"),
 	Nameservice2  ! {self(),{lookup,KoordName}},
 	receive 
 		{Name,Node} -> 
@@ -19,6 +19,7 @@ start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) ->
 		not_found -> 
 			io:format("GGT konnte Koordinator nicht finden und beendet sich ganz traurig :(\n")
 	end,
+	io:format("asdlhsadh\n"),
 	receive	
 		{setneighbors, LeftN, RightN} -> true
 			%loop(Mi, LeftN, RightN, Terminate)

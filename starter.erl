@@ -11,9 +11,12 @@ start(Id) ->
 	
 	pong = net_adm:ping(NameServiceNode),
 	Nameservice = global:whereis_name(nameservice),
+	%io:format("namens: ~p\n", [Nameservice]),
 	Nameservice ! {self() ,{lookup,KoordinatorName}},
+	%io:format("3asda\n	", []),
 	receive 
-		{Name,Node} -> 
+		{Name,Node} ->
+			io:format("Name: ~p, Node: ~p\n", [Name, Node]),
 			{Name, Node} ! {getsteeringval, self()},
 			receive
 				{steeringval, ArbeitsZeit, TermZeit, GGTProzessnummer} -> %die steuernden Werte für die ggT-Prozesse werden im Starter Prozess gesetzt; Arbeitszeit ist die simulierte Zeit zur Berechnung, 				TermZeit ist die Wartezeit, bis eine Wahl für eine Terminierung initiiert wird und GGTProzessnummer ist die Anzahl der zu startenden ggT-Prozesse.

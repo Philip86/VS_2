@@ -9,13 +9,15 @@ start() ->
 	{ok,TermZeit} = werkzeug:get_config_value(termzeit, ConfigListe),
 	{ok,ArbeitsZeit} = werkzeug:get_config_value(arbeitszeit, ConfigListe),
 
-	%register(KoordinatorName, spawn(koordinator, init, [ArbeitsZeit, TermZeit, GGTProzessNummer, []])),	
-
+		
 	
 	pong = net_adm:ping(NameServiceNode),
+	timer:sleep(500),
 	KAB = global:whereis_name(nameservice),
 	io:format("Nameservice: ~p, NameserviceNode: ~p~n", [KAB, NameServiceNode]),
-	KAB ! {self(),{rebind,KoordinatorName,node()}}.
+	timer:sleep(500),
+	KAB ! {self(),{rebind,KoordinatorName,node()}},
+	register(KoordinatorName, spawn(koordinator, init, [ArbeitsZeit, TermZeit, GGTProzessNummer, []])).
 
 init(ArbeitsZeit, TermZeit, GGTProzessnummer, GGTListe) ->
 	receive
