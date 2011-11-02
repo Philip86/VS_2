@@ -18,7 +18,7 @@ start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) ->
 	end,
 	werkzeug:logging(logFileName(MeinName), "beim Namensdienst und auf Node lokal registriert\r\n"),
 	
-	%Meldet sich beim Koordinator über Schnittstelle hello an
+	%Meldet sich beim Koordinator ï¿½ber Schnittstelle hello an
 	Nameservice2  ! {self(),{lookup,KoordName}},
 	receive 
 		{Name,Node} -> 
@@ -54,30 +54,33 @@ start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) ->
 	end,
 	
 	%Startet Bereitphase
-	loop(-1, LeftName2, RightName2, Nameservice2, Koordi, MeinName, ArbeitsZeit * 1000, infinity, TermZeit * 1000).
-
-
-
-loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeitDauer, TermZeit) ->
 	Timestamp1 = now(),
+	loop(-1, LeftName2, RightName2, Nameservice2, Koordi, MeinName, ArbeitsZeit * 1000, infinity, TermZeit * 1000, Timestamp1).
+
+
+
+loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeitDauer, TermZeit, Timestamp) ->
+	%Timestamp1 = now(),
 	receive
 		%Initilisiert Mi
 		{setpm, MiNeu} ->
+			Timestamp1 = now(),
 			%io:format("Prozess ~p hat neues Mi erhalten! \n",[MeinName]),
 			werkzeug:logging(logFileName(MeinName), stringFormat("setpm: ~p.\r\n", [MiNeu])),
-			loop(MiNeu, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeit, TermZeit);
+			loop(MiNeu, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeit, TermZeit, Timestamp1);
 		
 		%Berechnung?
 		{sendy, Y} ->
+			Timestamp1 = now(),
 			NewMi = calcGgt(Mi, Y, NeighborL, NeighborR, KoordName, MeinName, ArbeitsZeit),
 			%io:format("Neuer MI von: ~p  ist = ~p \n", [MeinName, NewMi]),
-			loop(NewMi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeit, TermZeit);
+			loop(NewMi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeit, TermZeit, Timestamp1);
 
 		%Abstimmungsanfrage angekommen
 		{abstimmung,Initiator} -> 
 			Timestamp2 = now(),
 			if 
-				Initiator == self() ->
+				Initiator == MeinName ->
 					%Anfrageabstimmung bei sich selbst angekommen
 					%io:format("~p bekommt Anfrageabstimmung von ~p, also von sich selbst \n", [MeinName, Initiator]),
 					NewTermZeit = infinity,
@@ -86,7 +89,7 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,Te
 					werkzeug:logging(logFileName(MeinName), stringFormat("~p: stimme ab (~p): Koordinator Terminierung gemeldet mit ~p. ~p\r\n", [MeinName, Initiator, Mi, werkzeug:timeMilliSecond()])),
 					KoordName ! {briefterm, {MeinName, Mi, CZeit}};
 				true ->
-					TimeDiff = timer:now_diff(Timestamp2, Timestamp1) / 1000,
+					TimeDiff = timer:now_diff(Timestamp2, Timestamp) / 1000,
 					%io:format("Prozess: ~p Differenz: ~p, TermzeitDauer: ~p \n", [MeinName,TimeDiff, TermZeitDauer]),
 					if 
 						(TimeDiff >= (TermZeit * 2 / 3)) or (TermZeitDauer == infinity) ->
@@ -104,15 +107,15 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,Te
 					end
 			end,
 			%io:format("\n\n NewtermZeit = ~p \n\n", [NewTermZeit]),
-			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,NewTermZeit, TermZeit);	
+			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,NewTermZeit, TermZeit, Timestamp);	
 
-		%Sendet das akutelle Mi zurück 	
+		%Sendet das akutelle Mi zurï¿½ck 	
 		{tellmi,From} -> 
 			Timestamp2 = now(),
-			TimeDiff = timer:now_diff(Timestamp2, Timestamp1) / 1000,
+			TimeDiff = timer:now_diff(Timestamp2, Timestamp) / 1000,
 			NewTermZeit = trunc(TermZeit - TimeDiff),
 			From ! Mi,
-			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,NewTermZeit, TermZeit);
+			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,NewTermZeit, TermZeit, Timestamp);
 
 		%Beendet den ggt-Prozess
 		kill -> 
@@ -126,9 +129,9 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,Te
 
 			werkzeug:logging(logFileName(MeinName), stringFormat("~p: initiiere eine Terminierungsabstimmung (~p). ~p\r\n", [MeinName, Mi, werkzeug:timeMilliSecond()])),
 			
-			NeighborR ! {abstimmung, self()},
+			NeighborR ! {abstimmung, MeinName},
 			%io:format("Prozess ~p startet Terminierungsabstimmung \n", [MeinName]),
-			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,infinity, TermZeit)
+			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,infinity, TermZeit, Timestamp)
 	end.
 	
 

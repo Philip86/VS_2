@@ -16,17 +16,19 @@ start(Id) ->
 	
 	pong = net_adm:ping(NameServiceNode),
 	Nameservice = global:whereis_name(nameservice),
+	timer:sleep(500),
 	werkzeug:logging(logFileName(Id), lists:concat(["Namenservice gebunden...", "\r\n"])),
 	
 	%io:format("Namenservice: ~p\n", [Nameservice]),
 	Nameservice ! {self() ,{lookup,KoordinatorName}},
+
 	receive 
 		{Name,Node} ->
 			werkzeug:logging(logFileName(Id), lists:concat([stringFormat("Koordinator chef (~p) gebunden.", [KoordinatorName]), "\r\n"])),
 			io:format("Name: ~p, Node: ~p\n", [Name, Node]),
 			{Name, Node} ! {getsteeringval, self()},
 			receive
-				{steeringval, ArbeitsZeit, TermZeit, GGTProzessnummer} -> %die steuernden Werte für die ggT-Prozesse werden im Starter Prozess gesetzt; Arbeitszeit ist die simulierte Zeit zur Berechnung, 				TermZeit ist die Wartezeit, bis eine Wahl für eine Terminierung initiiert wird und GGTProzessnummer ist die Anzahl der zu startenden ggT-Prozesse.
+				{steeringval, ArbeitsZeit, TermZeit, GGTProzessnummer} -> %die steuernden Werte fï¿½r die ggT-Prozesse werden im Starter Prozess gesetzt; Arbeitszeit ist die simulierte Zeit zur Berechnung, 				TermZeit ist die Wartezeit, bis eine Wahl fï¿½r eine Terminierung initiiert wird und GGTProzessnummer ist die Anzahl der zu startenden ggT-Prozesse.
 					MsgGetSteeringVal = stringFormat("getsteeringval: ~p Arbeitszeit ggT;~p Wartezeit ggT;~p Anzahl GGT Prozesse.", [ArbeitsZeit, TermZeit, GGTProzessnummer]),
 					werkzeug:logging(logFileName(Id), lists:concat([MsgGetSteeringVal, "\r\n"])),
 					startGGTProzess(NameServiceNode, KoordinatorName,  Teamnummer, PraktikumsGruppe,Id, ArbeitsZeit, TermZeit, GGTProzessnummer)

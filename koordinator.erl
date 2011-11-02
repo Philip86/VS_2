@@ -46,12 +46,25 @@ init(ArbeitsZeit, TermZeit, GGTProzessnummer, GGTListe, Nameservice) ->
 		%Manueller Aufruf um in die bereitfunktion (loop) zu wechseln
 		letsgo ->
 			werkzeug:logging("log/KoordinatorLog.log", stringFormat("Anmeldefrist abgelaufen, beginne mit Erzeugung des Ringes \r\n",[])),
-			createRing(GGTListe, Nameservice), 
+			RandomList = shuffle_list(GGTListe, []),
+			createRing(RandomList, Nameservice), 
 			werkzeug:logging("log/KoordinatorLog.log", stringFormat("Alle Prozesse wurden ueber Nachbarsn informiert. \r\n",[])),
 			werkzeug:logging("log/KoordinatorLog.log", stringFormat("Ring erzeugt, gehe in Bereitphase \r\n",[])),
 			loop(GGTListe, Nameservice)	
 	end.
 
+ 
+shuffle_list([], GGTProzesseShuffle) -> GGTProzesseShuffle;
+
+shuffle_list(GGTProzesse, GGTProzesseShuffle) -> 
+    RandomProcess = lists:nth(random:uniform(length(GGTProzesse)), GGTProzesse),
+    
+    GGTProzesseShuffleNew = lists:append(GGTProzesseShuffle, [RandomProcess]),
+    
+    GGTProzesseNew = lists:delete(RandomProcess, GGTProzesse),
+    
+    shuffle_list(GGTProzesseNew, GGTProzesseShuffleNew).
+    
 %Rekursive Funktion zur Versendung der Mis an die GGT Prozesse
 %Wenn Liste leer, Abbruch 
 createMis([], _) ->
