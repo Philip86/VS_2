@@ -1,20 +1,27 @@
 -module(ggt).
 -compile(export_all).
 
-start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) -> 
+start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) ->
+	
+	MsgText = stringFormat("~p Startzeit: ~p mit PID ~p auf ~p", [MeinName, werkzeug:timeMilliSecond(), self(), node()]),
+	werkzeug:logging(logFileName(MeinName), lists:concat([MsgText, "\r\n"])),
+ 
 	register(MeinName, self()),	
 	pong = net_adm:ping(NamensdienstNode),
 	Nameservice2 = global:whereis_name(nameservice),
+	
 	%io:format("ggt oka: ~p \n", [Nameservice2]),
 	Nameservice2 ! {self(),{rebind,MeinName,node()}},
 	%io:format("ggtasdlksajdlkj\n"),
 	receive
 		ok -> true
 	end,
+	werkzeug:logging(logFileName(MeinName), "beim Namensdienst und auf Node lokal registriert\r\n"),
 	%io:format("g445\n"),
 	Nameservice2  ! {self(),{lookup,KoordName}},
 	receive 
 		{Name,Node} -> 
+			werkzeug:logging(logFileName(MeinName), "beim Koordinator gemeldet.\r\n"),
 			Koordi = {Name, Node},
 			Koordi ! {hello, MeinName};
 		not_found -> 
@@ -26,6 +33,7 @@ start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) ->
 			Nameservice2  ! {self(),{lookup,LeftN}},
 			receive 
 				{Name1,Node1} -> 
+					werkzeug:logging(logFileName(MeinName), stringFormat("Linker Nachbar ~p gebunden.\r\n", [LeftN])),
 					LeftName2 = {Name1, Node1};
 				not_found -> 
 					LeftName2 = fehler,
@@ -34,6 +42,7 @@ start(NamensdienstNode, KoordName, MeinName, ArbeitsZeit, TermZeit) ->
 			Nameservice2  ! {self(),{lookup,RightN}},
 			receive 
 				{Name2,Node2} -> 
+					werkzeug:logging(logFileName(MeinName), stringFormat("Rechter Nachbar ~p gebunden.\r\n", [RightN])),
 					RightName2 = {Name2, Node2};
 				not_found -> 
 					RightName2 = fehler,
@@ -49,7 +58,8 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,Te
 	Timestamp1 = now(),
 	receive
 		{setpm, MiNeu} ->
-				io:format("Prozess ~p hat neues Mi erhalten! \n",[MeinName]),
+			io:format("Prozess ~p hat neues Mi erhalten! \n",[MeinName]),
+			werkzeug:logging(logFileName(MeinName), stringFormat("setpm: ~p.\r\n", [MiNeu])),
 			loop(MiNeu, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeit, TermZeit);
 
 		{sendy, Y} ->
@@ -63,18 +73,23 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,Te
 				io:format("~p bekommt Anfrageabstimmung von ~p, also von sich selbst \n", [MeinName, Initiator]),
 				NewTermZeit = infinity,
 				CZeit = werkzeug:timeMilliSecond(),
-				io:format("Der schwule Koordname = ~p\n", [KoordName]),
+				io:format("Der Koordname = ~p\n", [KoordName]),
+				werkzeug:logging(logFileName(MeinName), stringFormat("~p: stimme ab (~p): Koordinator Terminierung gemeldet mit ~p. ~p\r\n", [MeinName, Initiator, Mi, werkzeug:timeMilliSecond()])),
 				KoordName ! {briefterm, {MeinName, Mi, CZeit}};
 				true ->
 					TimeDiff = timer:now_diff(Timestamp2, Timestamp1) / 1000,
 					io:format("Prozess: ~p Differenz: ~p, TermzeitDauer: ~p \n", [MeinName,TimeDiff, TermZeitDauer]),
-						%EVTL NOCH UMRECHNEN IN SEK
+					%EVTL NOCH UMRECHNEN IN SEK
 					if (TimeDiff >= (TermZeit * 2 / 3)) or (TermZeitDauer == infinity) ->
 						io:format("~p bekommt Anfrageabstimmung von ~p und leitet an Nachbarn weiter \n", [MeinName, Initiator]),
 						io:format("Dabei ist TimeDiff = ~p und 2/3 der Termzeit = ~p \n", [TimeDiff, (TermZeit*2/3)]),
+
+						werkzeug:logging(logFileName(MeinName), stringFormat("~p: stimme ab (~p): mit >JA< gestimmt und weitergeleitet. ~p\r\n", [MeinName, Initiator, werkzeug:timeMilliSecond()])),
+
 						NeighborR ! {abstimmung, Initiator},
 						NewTermZeit = infinity;
 					true ->
+						werkzeug:logging(logFileName(MeinName), stringFormat("~p: stimme ab (~p): mit >NEIN< gestimmt und ignoriert.\r\n", [MeinName, Initiator])),
 						NewTermZeit = trunc(TermZeit - TimeDiff),
 						io:format("~p bekommt Anfrageabstimmung von ~p und ignoriert diese Anfrage. Neue Termzeit dabei = ~p \n", [MeinName, Initiator, NewTermZeit])
 					end
@@ -84,12 +99,18 @@ loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,Te
 
 		{tellmi,From} -> 
 			Timestamp2 = now(),
+			TimeDiff = timer:now_diff(Timestamp2, Timestamp1) / 1000,
+			NewTermZeit = trunc(TermZeit - TimeDiff),
 			From ! Mi,
-			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,TermZeitDauer, TermZeit);
+			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,NewTermZeit, TermZeit);
 		kill -> 
+			werkzeug:logging(logFileName(MeinName), stringFormat("Downtime: ~p vom Client ~p\r\n", [werkzeug:timeMilliSecond(), MeinName])),
 			Namensdienst ! {self(),{unbind,MeinName}}
 	after TermZeitDauer -> 
 			io:format("Zeit abgelaufen!!!!!!!!!!!!!!!! Nachtbar R = ~p\n", [NeighborR]),
+
+			werkzeug:logging(logFileName(MeinName), stringFormat("~p: initiiere eine Terminierungsabstimmung (~p). ~p\r\n", [MeinName, Mi, werkzeug:timeMilliSecond()])),
+			
 			NeighborR ! {abstimmung, self()},
 			io:format("Prozess ~p startet Terminierungsabstimmung \n", [MeinName]),
 			loop(Mi, NeighborL, NeighborR, Namensdienst, KoordName, MeinName, ArbeitsZeit,infinity, TermZeit)
@@ -101,6 +122,7 @@ calcGgt(Mi, Y,LeftN, RightN, KoordName, MeinName, ArbeitsZeit) ->
 	if 
 		Y < Mi -> 
 			NewMi = ((Mi - 1) rem Y) + 1,
+			werkzeug:logging(logFileName(MeinName), stringFormat("sendy: ~p (~p); berechnet als neues Mi ~p. ~p\r\n", [Y, Mi, NewMi, werkzeug:timeMilliSecond()])),
 			timer:sleep(ArbeitsZeit),
 			CZeit = werkzeug:timeMilliSecond(),
 			KoordName ! {briefmi,{MeinName, NewMi, CZeit}},
@@ -108,6 +130,7 @@ calcGgt(Mi, Y,LeftN, RightN, KoordName, MeinName, ArbeitsZeit) ->
 			RightN ! {sendy, NewMi},
 			NewMi;
 		true ->
+			werkzeug:logging(logFileName(MeinName), stringFormat("sendy: ~p (~p); keine Berechnung.\r\n", [Y, Mi])),
 			Mi
 	end.
  
@@ -116,3 +139,12 @@ calcGgt(Mi, Y,LeftN, RightN, KoordName, MeinName, ArbeitsZeit) ->
   %  then Mi := mod(Mi-1,y)+1;
    %      send #Mi to all neighbours;
  % fi 
+
+logFileName(GGTName) ->
+		lists:flatten(io_lib:format("log/GGTP_~p~p.log", [GGTName, node()])).
+
+%logPrefix(StarterId) ->
+%	lists:flatten(io_lib:format("Starter_~p-~p-07: ", [StarterId, node()])).
+
+stringFormat(String, Args) ->
+	lists:flatten(io_lib:format(String, Args)).
