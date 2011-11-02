@@ -1,6 +1,8 @@
 c(werkzeug), c(nameservice), c(koordinator), c(starter), c(ggt).
 
 
-für den tester
+
 c(werkzeug), c(nameservice), c(koordinator), c(starter), c(ggt), koordinator:start(), starter:start(1).
 c(werkzeug), c(nameservice), c(koordinator), c(starter), c(ggt), koordinator:start().
+
+c(nameservice), c(werkzeug).
