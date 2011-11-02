@@ -38,7 +38,7 @@ start(Id) ->
 startGGTProzess(_, _, _, _, _, _, _, 0) ->
 	finished;
 startGGTProzess(NameServiceNode, KoordinatorName, Teamnummer, PraktikumsGruppe, StarterId, ArbeitsZeit, TermZeit, N) ->
-	GGTName = list_to_atom(integer_to_list((PraktikumsGruppe*1000) + (Teamnummer * 100) + (N * 10) + StarterId)),
+	GGTName = list_to_atom(integer_to_list(PraktikumsGruppe) ++ integer_to_list(Teamnummer) ++ integer_to_list(N) ++ integer_to_list(StarterId)),
 	spawn(ggt, start, [NameServiceNode, KoordinatorName, GGTName, ArbeitsZeit, TermZeit]),
 	startGGTProzess(NameServiceNode,KoordinatorName, Teamnummer, PraktikumsGruppe, StarterId, ArbeitsZeit, TermZeit, N - 1).
 
